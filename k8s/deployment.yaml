@@ -30,7 +30,7 @@ spec:
 
       containers:
       - name: devops-app
-        image: ghcr.io/YOUR_GITHUB_USERNAME/devops-app:latest   # replace
+        image: ghcr.io/chandanvura/devops-app:latest   # replace
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
