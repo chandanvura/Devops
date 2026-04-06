@@ -1,0 +1,133 @@
+---
+# ─────────────────────────────────────────────────────────────────
+# Ansible Playbook — Configure DevOps App Servers
+# Usage: ansible-playbook -i inventory.ini setup-server.yml
+# ─────────────────────────────────────────────────────────────────
+
+- name: Configure application server
+  hosts: app_servers
+  become: yes    # run as sudo
+
+  vars:
+    java_version: 17
+    app_user: appuser
+    app_dir: /opt/devops-app
+    docker_compose_version: "2.24.0"
+
+  tasks:
+
+    # ─── System Update ──────────────────────────────────────────
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - unzip
+          - wget
+        state: present
+
+    # ─── Java 17 ─────────────────────────────────────────────────
+    - name: Install Java {{ java_version }}
+      apt:
+        name: "openjdk-{{ java_version }}-jdk"
+        state: present
+
+    - name: Verify Java version
+      command: java -version
+      register: java_result
+      changed_when: false
+
+    - name: Print Java version
+      debug:
+        msg: "{{ java_result.stderr }}"
+
+    # ─── Docker ──────────────────────────────────────────────────
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+        state: present
+
+    - name: Install Docker CE
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # ─── App User and Directory ────────────────────────────────
+    - name: Create app user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/false
+        home: "{{ app_dir }}"
+        create_home: yes
+
+    - name: Add app user to docker group
+      user:
+        name: "{{ app_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create app directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    # ─── App Config via Template ──────────────────────────────
+    - name: Deploy application config
+      template:
+        src: templates/application.yml.j2
+        dest: "{{ app_dir }}/application.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0640'
+      notify: Restart app service
+
+    # ─── Systemd Service ─────────────────────────────────────
+    - name: Create systemd service for devops-app
+      template:
+        src: templates/devops-app.service.j2
+        dest: /etc/systemd/system/devops-app.service
+      notify:
+        - Reload systemd
+        - Restart app service
+
+    - name: Enable devops-app service
+      systemd:
+        name: devops-app
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Restart app service
+      systemd:
+        name: devops-app
+        state: restarted

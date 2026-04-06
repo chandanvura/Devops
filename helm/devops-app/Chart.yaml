@@ -1,0 +1,14 @@
+apiVersion: v2
+name: devops-app
+description: Production-grade Spring Boot app — DevOps portfolio project
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - java
+  - spring-boot
+  - devops
+  - kubernetes
+maintainers:
+  - name: DevOps Engineer
+    email: you@example.com

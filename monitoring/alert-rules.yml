@@ -1,0 +1,68 @@
+groups:
+  - name: devops-app-alerts
+    interval: 30s
+    rules:
+
+      # App is completely down
+      - alert: AppDown
+        expr: up{job="devops-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "devops-app is DOWN"
+          description: "Prometheus cannot scrape devops-app. Instance: {{ $labels.instance }}"
+
+      # High HTTP 5xx error rate
+      - alert: HighErrorRate
+        expr: |
+          rate(http_server_requests_seconds_count{
+            job="devops-app", status=~"5.."
+          }[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 500 error rate on devops-app"
+          description: "Error rate is {{ $value | humanizePercentage }} — threshold is 5%"
+
+      # High response latency
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_server_requests_seconds_bucket{job="devops-app"}[5m])
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "devops-app p95 latency > 1 second"
+          description: "95th percentile latency is {{ $value }}s"
+
+      # JVM heap nearing limit
+      - alert: HighJVMMemory
+        expr: |
+          jvm_memory_used_bytes{area="heap", job="devops-app"}
+          /
+          jvm_memory_max_bytes{area="heap", job="devops-app"}
+          > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage above 85% on devops-app"
+          description: "Heap at {{ $value | humanizePercentage }} — OOMKill risk"
+
+      # Pod restart loop (K8s)
+      - alert: PodCrashLooping
+        expr: |
+          increase(kube_pod_container_status_restarts_total{
+            namespace=~"nonprod|prod",
+            pod=~"devops-app.*"
+          }[15m]) > 3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "devops-app pod is crash-looping"
+          description: "Pod {{ $labels.pod }} restarted {{ $value }} times in 15 minutes"

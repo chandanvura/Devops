@@ -1,0 +1,20 @@
+[Unit]
+Description=DevOps App — Spring Boot Java 17
+After=network.target
+
+[Service]
+User={{ app_user }}
+WorkingDirectory={{ app_dir }}
+ExecStart=/usr/bin/java \
+  -XX:+UseContainerSupport \
+  -XX:MaxRAMPercentage=75.0 \
+  -jar {{ app_dir }}/devops-app.jar \
+  --spring.config.location={{ app_dir }}/application.yml
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=devops-app
+
+[Install]
+WantedBy=multi-user.target
