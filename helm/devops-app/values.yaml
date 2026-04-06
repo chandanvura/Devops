@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/YOUR_GITHUB_USERNAME/devops-app
+  repository: ghcr.io/chandanvura/devops-app
   pullPolicy: Always
   tag: "latest"
 
