@@ -43,7 +43,7 @@ spec:
 
   environment {
     APP_NAME     = 'devops-app'
-    REGISTRY     = 'ghcr.io/YOUR_GITHUB_USERNAME'  // update this
+    REGISTRY     = 'ghcr.io/chandanvura'  // update this
     IMAGE_TAG    = "${env.GIT_COMMIT[0..7]}-${env.BUILD_NUMBER}"
     HELM_CHART   = './helm/devops-app'
   }
