@@ -65,6 +65,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-test, security-scan]
     if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write 
 
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
